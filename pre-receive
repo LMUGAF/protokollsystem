@@ -1,0 +1,182 @@
+#!/usr/bin/bash
+
+## A: addition of a file
+## C: copy of a file into a new one
+## D: deletion of a file
+## M: modification of the contents or mode of a file
+## R: renaming of a file
+## T: change in the type of the file
+## U: file is unmerged (you must complete the merge before it can be committed)
+## X: "unknown" change type (most probably a bug, please report it)
+
+set -e
+
+PUBLIC_DIR="/tmp/bar/public"
+PRIVATE_DIR="/tmp/bar/private"
+PUBLIC_SHADOW_DIR="/tmp/bar/public.shadow"
+PRIVATE_SHADOW_DIR="/tmp/bar/private.shadow"
+
+TMP_DIR="/tmp/bar/server-files"
+AUX_DIR="/tmp/bar/aux"
+
+
+mkPdf() {
+	local srcPath="$1"
+	
+	#local tmpPath="$AUX_DIR/$(basename "$1" ".tex").pdf"
+	local tmpPath="$AUX_DIR/$3.pdf"
+	
+	local dstPath="$2"
+	local dstDir="$(dirname "$dstPath")"
+	
+	
+	echo "Compile $1 --> $2"
+	
+	test -d "$AUX_DIR" && rm -R "$AUX_DIR"
+	mkdir -p "$AUX_DIR"
+	
+	latexmk -outdir="$AUX_DIR" -pdf -jobname="$3" "$srcPath"
+	
+	mkdir -p "$dstDir"
+	cp "$tmpPath" "$dstPath"
+	
+	rm -R "$AUX_DIR"
+}
+
+isCandidate() {
+	if [ -f "$1" ] ; then
+		case "$1" in
+			*.tex)
+				return 0
+			;;
+		esac
+	fi
+	
+	return 1
+}
+	
+
+pdfCreate() {
+	if [ "$#" -ne "1" ] ; then
+		echo "Bug"
+		exit 1
+	fi
+	
+	local src="$TMP_DIR/$1"
+	local dstPublic="$PUBLIC_SHADOW_DIR/${1:0:-4}.pdf"
+	local dstPrivate="$PRIVATE_SHADOW_DIR/${1:0:-4}.pdf"
+	
+	if isCandidate "$src" ; then
+		mkPdf "$src" "$dstPublic"  "public"
+		mkPdf "$src" "$dstPrivate" "private"
+	fi
+}
+
+pdfDelete() {
+	if [ "$#" -ne "1" ] ; then
+		echo "Bug"
+		exit 1
+	fi
+	
+	local src="$TMP_DIR/$1"
+	local dstPublic="$PUBLIC_SHADOW_DIR/${1:0:-4}.pdf"
+	local dstPrivate="$PRIVATE_SHADOW_DIR/${1:0:-4}.pdf"
+	
+	if isCandidate "$src" ; then
+		rm -R -v "$dstPublic" "$dstPrivate"
+	fi
+}
+
+pdfCopy() {
+	if [ "$#" -ne "2" ] ; then
+		echo "Bug"
+		exit 1
+	fi
+	
+	local oldSrc="$TMP_DIR/$1"
+	local newSrc="$TMP_DIR/$2"
+	local oldDstPublic="$PUBLIC_SHADOW_DIR/${1:0:-4}.pdf"
+	local newDstPublic="$PUBLIC_SHADOW_DIR/${2:0:-4}.pdf"
+	local oldDstPrivate="$PRIVATE_SHADOW_DIR/${1:0:-4}.pdf"
+	local newDstPrivate="$PRIVATE_SHADOW_DIR/${2:0:-4}.pdf"
+	
+	if isCandidate "$newSrc" ; then
+		cp -v "$oldDstPublic"  "$newDstPublic"
+		cp -v "$oldDstPrivate" "$newDstPrivate"
+	fi
+}
+
+pdfRename() {
+	if [ "$#" -ne "2" ] ; then
+		echo "Bug"
+		exit 1
+	fi
+	
+	local oldSrc="$TMP_DIR/$1"
+	local newSrc="$TMP_DIR/$2"
+	local oldDstPublic="$PUBLIC_SHADOW_DIR/${1:0:-4}.pdf"
+	local newDstPublic="$PUBLIC_SHADOW_DIR/${2:0:-4}.pdf"
+	local oldDstPrivate="$PRIVATE_SHADOW_DIR/${1:0:-4}.pdf"
+	local newDstPrivate="$PRIVATE_SHADOW_DIR/${2:0:-4}.pdf"
+	
+	if isCandidate "$newSrc" ; then
+		mv -v "$oldDstPublic"  "$newDstPublic"
+		mv -v "$oldDstPrivate" "$newDstPrivate"
+	fi
+}
+
+pdfHandler() {
+	local deletions="n"
+	
+	case "$1" in
+		A|M|T)
+			pdfCreate "${@:2}"
+		;;
+		D)
+			pdfDelete "${@:2}"
+			deletions="y"
+		;;
+		C100)
+			pdfCopy "${@:2}"
+		;;
+		R100)
+			pdfRename "${@:2}"
+			deletions="y"
+		;;
+		U)
+		;;
+		*|X)
+			echo "Unknown file modification"
+			exit
+		;;
+	esac
+	
+	if [ "$deletions" = "y" ] ; then
+		find "$PUBLIC_SHADOW_DIR" -type d -empty -delete
+		find "$PRIVATE_SHADOW_DIR" -type d -empty -delete
+	fi
+}
+
+rsync --delete --verbose --recursive "$PUBLIC_DIR/"  "$PUBLIC_SHADOW_DIR"
+rsync --delete --verbose --recursive "$PRIVATE_DIR/" "$PRIVATE_SHADOW_DIR"
+
+while read oldrev newrev refname ; do
+	if [ "$refname" == "refs/heads/master" ] ; then
+		test -d "$TMP_DIR" && rm -R "$TMP_DIR"
+		mkdir "$TMP_DIR"
+		
+		git archive "$newrev" | tar -x -C "$TMP_DIR"
+		
+		git diff --name-status --find-renames=100 $oldrev $newrev | \
+		while read line ; do
+			echo "###### $line"
+			IFS=$'\t' read -a params <<<"$line"
+			pdfHandler "${params[@]}"
+		done
+		
+		rm -R "$TMP_DIR"
+	fi
+done
+
+rsync --delete --verbose --recursive "$PUBLIC_SHADOW_DIR/"  "$PUBLIC_DIR"
+rsync --delete --verbose --recursive "$PRIVATE_SHADOW_DIR/" "$PRIVATE_DIR"
