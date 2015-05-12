@@ -142,13 +142,13 @@
 
 %%% commands \was and \makeWas; environment WAS %%%
 %{<Name Befehl>}{<Name Umgebung>}{<makeName>}{<Überschrift>}{<Bezeichnung in Text>}
-\makeCommands{was}{WAS}{Was}{WAS}{WAS Punkte}
+\makeCommands{was}{WAS}{Was}{W.A.S.}{W.A.S. Punkte}
 
 %%% commands \post and \makePost; environment POST %%%
-\makeCommands{post}{POST}{Post}{(elektronische) Post}{relevante Post}
+\makeCommands{post}{POST}{Post}{Post und E-Mails}{relevante Post}
 
 %%% commands \diskussion and \makeDiscussions; environment DISKUSSION %%%
-\makeCommands{diskussion}{DISKUSSION}{Discussions}{Diskussion}{Diskussion}
+\makeCommands{diskussion}{DISKUSSION}{Discussions}{Diskussion}{Diskussionen}
 
 %%% commands \bericht and \makeReports; environment BERICHT %%%
 \makeCommands{bericht}{BERICHT}{Reports}{Berichte}{Berichte}
@@ -223,39 +223,105 @@
 }
 
 
+%%%%%%%%%%%%% Old ToDo %%%%%%%%%%%%%
+
+\DTLnewdb{oldTodoDb}
+\DTLaddcolumn{oldTodoDb}{done}
+\DTLaddcolumn{oldTodoDb}{what}
+\DTLaddcolumn{oldTodoDb}{status}
+\DTLaddcolumn{oldTodoDb}{who}
+\DTLaddcolumn{oldTodoDb}{until}
+
+\NewDocumentCommand\alttodo{o m o d() o}{
+	\DTLnewrow{oldTodoDb}%
+	\DTLnewdbentry{oldTodoDb}{what}{#2}%
+	\DTLnewdbentry{oldTodoDb}{who}{#4}%
+	\IfNoValueTF{#1}{}{\DTLnewdbentry{oldTodoDb}{done}{#1}}%
+	\IfNoValueTF{#3}{}{\DTLnewdbentry{oldTodoDb}{status}{#3}}%
+	\IfNoValueTF{#5}{}{\DTLnewdbentry{oldTodoDb}{until}{#5}}%
+}
+
+\NewDocumentCommand\makeOldTodo{}{
+	\section{Alte ToDo}
+	
+	\DTLifdbempty{oldTodoDb}{
+		Keine
+	}{
+		\begin{itemize}
+		\DTLsort{who,until}{oldTodoDb}
+		\DTLforeach*{oldTodoDb}{\theDone=done,\theWhat=what,\theStatus=status,\theWho=who,\theUntil=until}{%
+			\item[\DTLifnull{\theDone}{$\Box$}{\Checkedbox}] %
+			\theWhat{} (\theWho)%
+			\DTLifnull{\theStatus}{}{\\\emph{Status: \theStatus}}%
+			\DTLifnull{\theUntil}{}{\\\emph{Bis: \theUntil}}%
+			\DTLifnull{\theDone}{%
+				\DTLifnull{\theUntil}{%
+					\edef\foox{\todox{\theWhat}{\theWho}{\thesection}}%
+				}{%
+					\edef\foox{\todox{\theWhat}{\theWho}{\thesection}[\theUntil]}%
+				}%
+			}{%
+				\DTLifnull{\theUntil}{%
+					\edef\foox{\todox[\theDone]{\theWhat}{\theWho}{\thesection}}%
+				}{%
+					\edef\foox{\todox[\theDone]{\theWhat}{\theWho}{\thesection}[\theUntil]}%
+				}%
+			}%
+			\foox%
+		}%
+		\end{itemize}
+	}
+}
+
 %%%%%%%%%%%%% ToDo %%%%%%%%%%%%%
 
 \DTLnewdb{todoDb}
+\DTLaddcolumn{todoDb}{who}
+\DTLaddcolumn{todoDb}{where}
+\DTLaddcolumn{todoDb}{until}
+\DTLaddcolumn{todoDb}{done}
 
 \NewDocumentCommand\todo{o m d() o}{
-	\DTLifdbempty{todoDb}{}{
-		\DTLaddcolumn{todoDb}{who}
-		\DTLaddcolumn{todoDb}{where}
-		\DTLaddcolumn{todoDb}{until}
-		\DTLaddcolumn{todoDb}{done}
-	}
-	\edef\where{\thesubsection}%
 	%\par\emph{\IfNoValueTF{#1}{ToDo: }{ToDo \checkmark: }}#2 (#3)%
 	\par\emph{ToDo: }#2 (#3) \IfNoValueTF{#1}{}{ \checkmark}%
 	\IfNoValueTF{#4}{}{\\\emph{Bis #4}}%
+	\edef\foox{\todox[#1]{#2}{#3}{\ifnumgreater{\value{subsection}}{0}{\thesubsection}{\thesection}}[#4]}%
+	\foox%
+}
+
+\NewDocumentCommand\todox{ommmo}{
 	\DTLnewrow{todoDb}%
 	\DTLnewdbentry{todoDb}{what}{#2}%
 	\DTLnewdbentry{todoDb}{who}{#3}%
-	\DTLnewdbentry{todoDb}{where}{\where}%
+	\DTLnewdbentry{todoDb}{where}{#4}%
 	%
-	\IfNoValueTF{#4}%
-	{}%
-	{%
-		\DTLnewdbentry{todoDb}{until}{#4}%
-		\IfNoValueTF{#1}{\termin{#4}{Deadline für #3: #2 (siehe \where)}}{}%
+	%% Add an "until" flag in the ToDo DB & add a date
+	\IfNoValueTF{#5}{}{%
+		\DTLnewdbentry{todoDb}{until}{#5}%
+		\IfNoValueTF{#1}{%
+			\edef\barx{\termin{#5}{Deadline für #3: #2 (siehe #4)}}%
+			\barx%
+		}{}%
 	}%
-	\IfNoValueTF{#1}{}{\DTLnewdbentry{todoDb}{done}{#1}}%
+	%
+	%% Add an "done" flag in the ToDo DB
+	\IfNoValueTF{#1}{}{
+		\expandafter\ifstrequal\expandafter{#1}{done}{}{%
+			\PackageError{fssitzung}%
+			{Das erste Argument von \\todo und \\alttodo muss "done" oder leer sein.}%
+			{Das erste Argument von \\todo und \\alttodo muss "done" oder leer sein.}%
+			\stop%
+		}%
+		\DTLnewdbentry{todoDb}{done}{#1}
+	}%
 }
 
 \NewDocumentCommand\makeTodo{}{
+	\section{ToDo}
 	
-	\DTLifdbempty{todoDb}{}{
-		\section{ToDo}
+	\DTLifdbempty{todoDb}{
+		Keine
+	}{
 		\DTLsort{who,where,until}{todoDb}
 		\DTLforeach*{todoDb}{\theWhat=what,\theWho=who,\theWhere=where,\theUntil=until,\theDone=done}{%
 			\DTLifnull{\theDone}{
@@ -442,9 +508,9 @@
 		\DTLiffirstrow{}{\DTLiflastrow{ und}{,}} %
 		\theName %
 		\DTLifnull{\theFrom}{%
-			\DTLifnull{\theTo}{}{ (Bis {\theTo} Uhr)}%
+			\DTLifnull{\theTo}{}{ (bis {\theTo} Uhr)}%
 		}{ %
-			(Ab \theFrom \DTLifnull{\theTo}{}{ bis \theTo} Uhr)%
+			(ab \theFrom \DTLifnull{\theTo}{}{ bis \theTo} Uhr)%
 		}%
 	}%
 }
@@ -454,8 +520,8 @@
 
 \NewDocumentCommand\sitzung{m}{
 	\iftoggle{public}
-	{	\subtitle{Öffentliches Protokoll}		}
-	{	\subtitle{\emph{Internes} Protokoll}	}
+	{\subtitle{Öffentliches Protokoll}}
+	{\subtitle{\emph{Internes} Protokoll}}
 	\title{Fachschaftssitzung}
 	\date{\vspace{-1cm}#1}
 	
@@ -465,22 +531,21 @@
 		\maketitle
 		
 		\begin{description}
-			\ifint{\item[Anwesend] \personlist{anwesendDb}}
-			\ifint{\item[Leitung] \personlist{modDb}}
-			\ifint{\item[Protokoll] \personlist{protDb}}
-			\item[Beginn] \theStart
-			\item[Ende]  \theEnd
+			       \item[Anwesend]       \iftoggle{public}{\DTLrowcount{anwesendDb} Personen}{\personlist{anwesendDb}}
+			\ifint{\item[Sitzungleitung] \personlist{modDb}}
+			\ifint{\item[Protokoll]      \personlist{protDb}}
+			       \item[Beginn]         \theStart
+			       \item[Ende]           \theEnd
 		\end{description}
 		
-		\section{Sitzungsleitung / Protokoll}
+		\section{Sitzungsleitung und Protokoll}
 		Die Vorschläge zu Sitzungsleitung und Protokollanten wurden angenommen.
 		
 		\makePost
-		
-		%\section{Stand Projekte von letzter Woche}
+		\makeOldTodo
 		\makeReports
-		\makeApplications
 		\makeDiscussions
+		\makeApplications
 		\makeWas
 		\appendix
 		\makeDates
