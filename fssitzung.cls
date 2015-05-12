@@ -1,24 +1,24 @@
 \ProvidesClass{fssitzung}[2015/05/09 Fachschaftssitzungs class by GAF]
 \LoadClass[a4paper,parskip,fontsize=9pt,DIV=12]{scrartcl}
 
-\usepackage{iftex}
+\RequirePackage{iftex}
 
 \ifPDFTeX
-			\usepackage[utf8]{inputenc}
-			\usepackage[ngerman]{babel}
-			\usepackage[T1]{fontenc}
+			\RequirePackage[utf8]{inputenc}
+			\RequirePackage[ngerman]{babel}
+			\RequirePackage[T1]{fontenc}
 \else
+	% Don't switch the order: github.com/reutenauer/polyglossia/issues/50
 	\ifLuaTeX
-			\usepackage[ngerman]{babel}
-			\usepackage[pdftex]{graphicx} % graphix always before hyperref
-			\usepackage[pdftex,hidelinks]{hyperref}
+			\RequirePackage[ngerman]{babel}
+			\RequirePackage[pdftex]{graphicx} % graphix always before hyperref
+			\RequirePackage[pdftex,hidelinks]{hyperref}
 	\else
-	% don't switch the order: github.com/reutenauer/polyglossia/issues/50
 		\ifXeTeX
-			\usepackage{polyglossia}
+			\RequirePackage{polyglossia}
 			\setdefaultlanguage[babelshorthands=true]{german}
-			\usepackage{xunicode} % loads graphicx so load it before hyperref
-			\usepackage[xetex,hidelinks]{hyperref}
+			\RequirePackage{xunicode} % loads graphicx so load it before hyperref
+			\RequirePackage[xetex,hidelinks]{hyperref}
 		\fi
 	\fi
 \fi
@@ -39,85 +39,191 @@
 \RequirePackage{dingbat}
 \RequirePackage{enumitem}
 \RequirePackage{graphicx}
-
+\RequirePackage{fancyhdr}
+\RequirePackage{geometry}
 \RequirePackage[compact]{titlesec}
-\titlespacing{\section}{0pt}{*0}{*0}
-\titlespacing{\subsection}{0pt}{*0}{*0}
-\titlespacing{\subsubsection}{0pt}{*0}{*0}
 
-\newtoggle{public}
 
-\def\beginn#1{\def\theStart{#1}}
-\def\ende#1{\def\theEnd{#1}}
-\def\ifint#1{\iftoggle{public}{}{#1}}
-\def\ifext#1{\iftoggle{public}{#1}{}}
+
+
+
+
+
+%% @TODO make @ version (which fails for now)
+\NewDocumentCommand\beginn{m}{%
+	\gdef\fssStart{#1}%
+}
+
+%% @TODO make @ version (which fails for now)
+\NewDocumentCommand\ende{m}{%
+	\gdef\fssEnd{#1}%
+}
+
 
 \def\defClearCollection#1{%
 	\definecollection{#1}%
 	\begin{collect}{#1}{}{}\end{collect}}
 
-\expandafter\ifstrequal\expandafter{\jobname}{private}%
-{\togglefalse{public}}
-{\toggletrue{public}}
+
+%% ## Internal/External ########################################################
+%% ==== Detection ==============================================================
+\newtoggle{fss@forExternal}
+
+%% Only if the jobname is "internal" (xelatex -jobname internal ...), a version
+%% with confidential informations is generated. This pessimistic logic hopefully
+%% prevents some fails.
+\expandafter\ifstrequal\expandafter{\jobname}{internal}%
+{\togglefalse{fss@forExternal}}%
+{\toggletrue{fss@forExternal}}
 
 
-%%%%%%%%%%%%% Was/Post/Berichte/Diskussion %%%%%%%%%%%%%
-\defClearCollection{ignore}
+%% ==== User commands ==========================================================
+\NewDocumentCommand\intern{m}{%
+	\iftoggle{fss@forExternal}{}{#1}%
+}
 
-\NewDocumentCommand\makeCommands{m m m m m}{
-	\defClearCollection{#1CollectionC}
-	\defClearCollection{#2CollectionE}
+\NewDocumentCommand\extern{m}{%
+	\iftoggle{fss@forExternal}{#1}{}%
+}
+
+\NewDocumentCommand\internextern{mm}{%
+	\iftoggle{fss@forExternal}{#2}{#1}%
+}
+
+
+
+%% ## Design ###################################################################
+%% ==== Page ===================================================================
+\geometry{
+	includehead,
+	includefoot,             %% vvv Margin        vvv Margin
+	top=1cm,                 %% Upper page   <--> Upper head
+	headsep=.8cm,            %% Lower head   <--> Upper text
+	bottom=0cm,              %% Lower text   <--> Lower footer(!)
+	footskip=1cm,            %% Lower footer <--> Lower page
+	left=2.5cm,
+	right=2.5cm,
+	%showframe    %TODO REMOVE BEFORE PRODUCTION
+}
+
+
+%% ==== Titles =================================================================
+%% Set the font style
+\titleformat*{\section}      {\normalfont\huge\sffamily\bfseries}
+\titleformat*{\subsection}   {\normalfont\normalsize\sffamily\bfseries}
+\titleformat*{\subsubsection}{\normalfont\small\sffamily\bfseries}
+
+%% Set left margin and the space above and below the title. The last two are
+%% relative to the default "compact" style set with the titlesec package loading
+%% options
+\titlespacing{\section}{0cm}{*3}{*0}
+\titlespacing{\subsection}{0cm}{*1}{*0}
+\titlespacing{\subsubsection}{0pt}{*0}{*0}
+
+%% Put gray title numbers in the margin
+\renewcommand{\@seccntformat}[1]{%
+	\llap{%
+		\textcolor{black!50}%
+		{\csname the#1\endcsname}%
+		\hspace{1em}%
+	}%
+}
+
+
+%% ==== Definition lists =======================================================
+%% This is later used as the alignment style of the definition list following
+%% the title
+\SetLabelAlign{parright}{\parbox[t]{\labelwidth}{\raggedleft#1}}
+
+
+%% ==== Pro & Contra ===========================================================
+\newmdenv[
+	topline=false,
+	bottomline=false,
+	rightline=false,
+	skipabove=1em,
+	leftmargin=-.9em,
+	innermargin=0pt,
+	innertopmargin=0pt,
+	innerbottommargin=0pt,
+	innerleftmargin=0pt,
+	linecolor=green!60,
+	linewidth=2.5pt,
+]{proBox}
+
+\newmdenv[
+	topline=false,
+	bottomline=false,
+	rightline=false,
+	skipabove=1em,
+	leftmargin=-.9em,
+	innermargin=0pt,
+	innertopmargin=0pt,
+	innerbottommargin=0pt,
+	innerleftmargin=0pt,
+	linecolor=red!60,
+	linewidth=2.5pt,
+]{conBox}
+
+
+
+
+
+%% ## Blocks with big & small veersion #########################################
+%% ==== Block macro template ===================================================
+%% Create a collection for all environment contents which have to be ignored
+%% because of internal content in external versions
+\defClearCollection{fss@ignore}
+
+%% m: command macro name (german, all lowercase)
+%% m: environment macro name (german, all caps)
+%% m: end of the make macro name (english, first letter cap)
+%% m: Title of all blocks (german)
+%% m: Description if no block is defined in document (german)
+%%    Competes "Keine $m."
+\NewDocumentCommand\@fss@makeCommands{m m m m m}{
+	\defClearCollection{fss@#1CollectionC}
+	\defClearCollection{fss@#2CollectionE}
 	
-	\newbool{#1FoundC}
-	\newbool{#2FoundE}
-
+	\newtoggle{fss@#1FoundC}
+	\newtoggle{fss@#2FoundE}
+	
+	%% User environment for the block
+	%% s: Stared environment: Only for internal versions
+	%% m: Title of the block
 	\DeclareDocumentEnvironment{#2}{s m}{%
-		\ifboolexpr{togl{public} and test{\IfBooleanTF ##1}}
-		{\@nameuse{collect}{ignore}{}{}}%	else
-		{
-			\@nameuse{collect}{#2CollectionE}{}{}
-				\booltrue{#2FoundE}
+		\ifboolexpr{togl{fss@forExternal} and test{\IfBooleanTF ##1}}{
+			%% For the external version of a stared environment, collect the
+			%% environment content in the "fss@ignore" collection, which will
+			%% never be used.
+			\@nameuse{collect}{fss@ignore}{}{}
+		}{
+			\@nameuse{collect}{fss@#2CollectionE}{}{}
+				\toggletrue{fss@#2FoundE}
 				\subsection{##2}
 		}
-	}
-	{
+	}{% BODY
 		\@nameuse{endcollect}
 	}
 	
-	%\newenvironment{#2}[1]{
-	%	\booltrue{#2FoundE}
-	%	\@nameuse{collect}{#2CollectionE}{}{}
-	%		\subsection{##1}
-	%}
-	%{
-	%	\@nameuse{endcollect}
-	%}
-	%
-	%\newenvironment{#2*}[1]{%
-	%	\booltrue{#2FoundE}
-	%	\iftoggle{public}%
-	%	{\@nameuse{collect}{ignore}{}{}}% else
-	%	{
-	%		\booltrue{#2FoundE}
-	%		\@nameuse{collect}{#2CollectionE}{}{}
-	%			\subsection{##1}
-	%	}
-	%}
-	%{
-	%	\@nameuse{endcollect}
-	%}
-	
-	
+	%% User command for the block
+	%% s: Stared environment: Only for internal versions
+	%% o: Title of the block
+	%% m: Content of the block
 	\expandafter\NewDocumentCommand\csname #1\endcsname{s o m}{
-		\ifboolexpr{togl{public} and test{\IfBooleanTF ##1}}{}%	else
-		{
+		\ifboolexpr{togl{fss@forExternal} and test{\IfBooleanTF ##1}}{
+			%% Do nothing in external version with the stared command
+		}{
 			\IfNoValueTF{##2}{%
-				\booltrue{#1FoundC}
-				\begin{collect}{#1CollectionC}{}{}
+				%% If no title is given, collect an item for the list.
+				\toggletrue{fss@#1FoundC}
+				
+				\begin{collect}{fss@#1CollectionC}{}{}
 					\item ##3
 				\end{collect}
-			}
-			{%
+			}{%
+				%% If a title is given, use the environment of the block to
+				%% create the "big" version.
 				\begin{#2}{##2}
 					##3
 				\end{#2}
@@ -125,74 +231,97 @@
 		}
 	}
 	
+	%% @TODO make @ version (which fails for now)
 	\expandafter\NewDocumentCommand\csname make#3\endcsname{}{
 		\section{#4}
-		\includecollection{#2CollectionE}
-		\ifbool{#1FoundC}{%
-			\ifbool{#2FoundE}{\subsection{Sonstiges}}{}
+		%
+		%% Include the big version's collection (which can be empyt)
+		\includecollection{fss@#2CollectionE}
+		%
+		\iftoggle{fss@#1FoundC}{%
+			%% Include the small version's collection only if there are
+			%% collected items. Otherwise there would be an empty list taking up
+			%% space.
+			%% 
+			%% A own subsection for the small version's collection is only 
+			%% needed on preciding the big version's collection.
+			\iftoggle{fss@#2FoundE}{\subsection{Sonstiges}}{}
+			%
 			\begin{itemize}
-				\includecollection{#1CollectionC}
+				\includecollection{fss@#1CollectionC}
 			\end{itemize}
 		}{
-			\ifbool{#2FoundE}{}{Keine #5.}
+			\iftoggle{fss@#2FoundE}{}{Keine #5.}
 		}
 	}
 }
 
 
-%%% commands \was and \makeWas; environment WAS %%%
+%% ==== Instantiate blocks =====================================================
 %{<Name Befehl>}{<Name Umgebung>}{<makeName>}{<Überschrift>}{<Bezeichnung in Text>}
-\makeCommands{was}{WAS}{Was}{W.A.S.}{W.A.S. Punkte}
+%% Creates \was, \begin{WAS}\end{WAS} and \makeWas
+\@fss@makeCommands{was}{WAS}{Was}{W.A.S.}{W.A.S. Punkte}
 
-%%% commands \post and \makePost; environment POST %%%
-\makeCommands{post}{POST}{Post}{Post und E-Mails}{relevante Post}
+%% Creates \post, \begin{POST}\end{POST} and \makeMail
+\@fss@makeCommands{post}{POST}{Mail}{Post und E-Mails}{relevante Post}
 
-%%% commands \diskussion and \makeDiscussions; environment DISKUSSION %%%
-\makeCommands{diskussion}{DISKUSSION}{Discussions}{Diskussion}{Diskussionen}
+%% Creates \diskussion, \begin{DISKUSSION}\end{DISKUSSION} and \makeDiscussions
+\@fss@makeCommands{diskussion}{DISKUSSION}{Discussions}{Diskussion}{Diskussionen}
 
-%%% commands \bericht and \makeReports; environment BERICHT %%%
-\makeCommands{bericht}{BERICHT}{Reports}{Berichte}{Berichte}
+%% Creates \bericht, \begin{BERICHT}\end{BERICHT} and \makeReports
+\@fss@makeCommands{bericht}{BERICHT}{Reports}{Berichte}{Berichte}
 
+
+%% ==== Shortcuts ==============================================================
 \NewDocumentCommand\berichtFakRat{m}{
 	\bericht{Fakultätsrat #1}
 }
 
 
-%%%%%%%%%%%%% Anträge %%%%%%%%%%%%%
+%% ## Motion blocks ############################################################
 
-\defClearCollection{applicationCollection}
-\newbool{antragFound}
+\defClearCollection{fss@motionCollection}
+\newtoggle{fss@motionFound}
 
 
 \NewDocumentEnvironment{ANTRAG}{m m}{%
-	\collect{applicationCollection}{
-		\subsection{#2}
-		\booltrue{antragFound}
+	\collect{fss@motionCollection}{%
+		\subsection{#2}%
+		\toggletrue{fss@motionFound}%
 	}{% BODY
-		\edef\status{#1}
-		\ifdefstring{\status}{angenommen}{\par $\Rightarrow$ Der Antrag wurde einstimmig angenommen.}{
-		\ifdefstring{\status}{abgelehnt}{\par $\Rightarrow$ Für den Antrag konnte kein Konsens gefunden werden.}{
-		\PackageError{fssitzung}{Ungültiger Status}{Das erste Argument von \\ANTRAG und \\antrag muss "angenommen", "abgelehnt" oder leer sein.}\stop
-		}}
-	}
-}{\endcollect}
+		\edef\status{#1}%
+		%
+		\ifdefstring{\status}{angenommen}{\par $\Rightarrow$ Der Antrag wurde einstimmig angenommen.}{%
+		\ifdefstring{\status}{abgelehnt}{\par $\Rightarrow$ Für den Antrag konnte kein Konsens gefunden werden.}{%
+			\PackageError{fssitzung}%
+			{Das erste Argument von \\ANTRAG und \\antrag muss "angenommen", "abgelehnt" oder leer sein.}%
+			{Das erste Argument von \\ANTRAG und \\antrag muss "angenommen", "abgelehnt" oder leer sein.}%
+			\stop%
+		}}%
+	}%
+}{% BODY
+	\endcollect%
+}
 
+%% The small version is displayed exactly the same as the big version
 \NewDocumentCommand\antrag{m m G{}}{%
 	\begin{ANTRAG}{#1}{#2}#3\end{ANTRAG}%
 }
 
+%% @TODO make @ version (which fails for now)
+\NewDocumentCommand\makeMotions{}{
+	\section{Anträge}
+	\includecollection{fss@motionCollection}
+	\iftoggle{fss@motionFound}{}{Keine Anträge.}
+}
+
+%% ==== Shortcuts ==============================================================
 \NewDocumentCommand\transponderAntrag{m}{
 	\antrag{angenommen}{#1 bekommt einen Transponder}
 }
 
 \NewDocumentCommand\accountAntrag{m}{
 	\antrag{angenommen}{#1 bekommt einen Account}
-}
-
-\NewDocumentCommand\makeApplications{}{
-	\section{Anträge}
-	\includecollection{applicationCollection}
-	\ifbool{antragFound}{}{Keine Anträge.}
 }
 
 
@@ -381,19 +510,8 @@
 
 %%%%%% L %%%%%%
 
-\newmdenv[
-  topline=false,
-  bottomline=false,
-  rightline=false,
-  skipabove=1em,
-  leftmargin=-.9em,
-  innermargin=0pt,
-  innertopmargin=0pt,
-  innerbottommargin=0pt,
-  innerleftmargin=0pt,
-  linecolor=green!60,
-  linewidth=2.5pt,
-]{proBox}
+
+
 
 \newbool{insidePro}
 \boolfalse{insidePro}
@@ -424,19 +542,7 @@
 
 
 
-\newmdenv[
-  topline=false,
-  bottomline=false,
-  rightline=false,
-  skipabove=1em,
-  leftmargin=-.9em,
-  innermargin=0pt,
-  innertopmargin=0pt,
-  innerbottommargin=0pt,
-  innerleftmargin=0pt,
-  linecolor=red!60,
-  linewidth=2.5pt,
-]{conBox}
+
 \newbool{insideCon}
 \boolfalse{insideCon}
 
@@ -517,37 +623,48 @@
 
 
 %%%%%%%%%%%%% Dokumenterzeugung %%%%%%%%%%%%%
-
 \NewDocumentCommand\sitzung{m}{
-	\iftoggle{public}
-	{\subtitle{Öffentliches Protokoll}}
-	{\subtitle{\emph{Internes} Protokoll}}
+	\subtitle{\internextern{\emph{Internes}}{Öffentliches} Protokoll}
 	\title{Fachschaftssitzung}
 	\date{\vspace{-1cm}#1}
 	
+	\makeatletter
+	\fancyhf{}
+	\fancyhead[L]{\internextern{Internes}{Öffentliches} Protokoll der Fachschaftssitzung vom #1}
+	\fancyhead[R]{Seite \thepage}
+	\makeatother
+	
+	
+	\pagestyle{fancy}
 	\begin{document}
-		\setcounter{section}{-1}
-		\setcounter{tocdepth}{0}
 		\maketitle
+		\thispagestyle{empty}
 		
-		\begin{description}
-			       \item[Anwesend]       \iftoggle{public}{\DTLrowcount{anwesendDb} Personen}{\personlist{anwesendDb}}
-			\ifint{\item[Sitzungleitung] \personlist{modDb}}
-			\ifint{\item[Protokoll]      \personlist{protDb}}
-			       \item[Beginn]         \theStart
-			       \item[Ende]           \theEnd
+		\begin{description}[
+			style=multiline,
+			leftmargin=3cm,
+			rightmargin=1cm,
+			align=parright
+		]
+			        \item[Anwesend]       \internextern{\personlist{anwesendDb}}{\DTLrowcount{anwesendDb} Personen}
+			\intern{\item[Sitzungleitung] \personlist{modDb}}
+			\intern{\item[Protokoll]      \personlist{protDb}}
+			        \item[Beginn]         \makeatletter\fssStart\makeatother
+			        \item[Ende]           \makeatletter\fssEnd\makeatother
 		\end{description}
 		
+		%% The first section starts traditionally with 0 (tzzz, computer
+		%% scientists). Therefor we have to set section to -1
+		\setcounter{section}{-1}
 		\section{Sitzungsleitung und Protokoll}
 		Die Vorschläge zu Sitzungsleitung und Protokollanten wurden angenommen.
 		
-		\makePost
+		\makeMail
 		\makeOldTodo
 		\makeReports
 		\makeDiscussions
-		\makeApplications
+		\makeMotions
 		\makeWas
-		\appendix
 		\makeDates
 		\makeTodo
 	\end{document}
