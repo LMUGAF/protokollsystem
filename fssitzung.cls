@@ -172,7 +172,7 @@
 		\edef\status{#1}
 		\ifdefstring{\status}{angenommen}{\par $\Rightarrow$ Der Antrag wurde einstimmig angenommen.}{
 		\ifdefstring{\status}{abgelehnt}{\par $\Rightarrow$ Für den Antrag konnte kein Konsens gefunden werden.}{
-		\PackageError{mypackage}{you did it wrong}{help text}\stop
+		\PackageError{fssitzung}{Ungültiger Status}{Das erste Argument von \\ANTRAG und \\antrag muss "angenommen", "abgelehnt" oder leer sein.}\stop
 		}}
 	}
 }{\endcollect}
@@ -425,7 +425,7 @@
 	}{
 		\ifdefstring{\type}{leitung}{\def\dbName{modDb}}{%
 		\ifdefstring{\type}{protokoll}{\def\dbName{protDb}}{%
-		\PackageError{mypackage}{Ungueltige Rolle}{Erstes Argument muss "leitung", "prokotoll" oder leer sein.}\stop
+		\PackageError{fssitzung}{Ungueltige Rolle}{Erstes Argument bei \\anwesend muss "leitung", "prokotoll" oder nicht gesetzt sein.}\stop
 	}}}
 	
 	\DTLnewrow{\dbName}
