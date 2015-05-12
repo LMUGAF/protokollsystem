@@ -380,7 +380,7 @@
 		\DTLsort{who,until}{oldTodoDb}
 		\DTLforeach*{oldTodoDb}{\theDone=done,\theWhat=what,\theStatus=status,\theWho=who,\theUntil=until}{%
 			\item[\DTLifnull{\theDone}{$\Box$}{\Checkedbox}] %
-			\theWhat{} (\theWho)%
+			\theWhat\intern{ (\theWho)}%
 			\DTLifnull{\theStatus}{}{\\\emph{Status: \theStatus}}%
 			\DTLifnull{\theUntil}{}{\\\emph{Bis: \theUntil}}%
 			\DTLifnull{\theDone}{%
@@ -412,7 +412,7 @@
 
 \NewDocumentCommand\todo{o m d() o}{
 	%\par\emph{\IfNoValueTF{#1}{ToDo: }{ToDo \checkmark: }}#2 (#3)%
-	\par\emph{ToDo: }#2 (#3) \IfNoValueTF{#1}{}{ \checkmark}%
+	\par\emph{ToDo: }#2\intern{ (#3)} \IfNoValueTF{#1}{}{ \checkmark}%
 	\IfNoValueTF{#4}{}{\\\emph{Bis #4}}%
 	\edef\foox{\todox[#1]{#2}{#3}{\ifnumgreater{\value{subsection}}{0}{\thesubsection}{\thesection}}[#4]}%
 	\foox%
@@ -666,6 +666,6 @@
 		\makeMotions
 		\makeWas
 		\makeDates
-		\makeTodo
+		\intern{\makeTodo}
 	\end{document}
 }
