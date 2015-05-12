@@ -1,152 +1,155 @@
-\ProvidesClass{fssitzung}[2014/04/30 Fachschaftssitzungs class by GAF]
+\ProvidesClass{fssitzung}[2015/05/09 Fachschaftssitzungs class by GAF]
 \LoadClass[a4paper,parskip,fontsize=9pt,DIV=12]{scrartcl}
 
 \RequirePackage[utf8]{inputenc}
 \RequirePackage[ngerman]{babel}
 \RequirePackage[T1]{fontenc}
+\RequirePackage{lmodern}
 \RequirePackage{microtype}
 
 \RequirePackage{datatool}
 \RequirePackage{xparse}
 \RequirePackage{etoolbox}
 \RequirePackage{ifthen}
-\RequirePackage{environ}
 \RequirePackage{collect}
 \RequirePackage{wasysym}
 \RequirePackage{marvosym}
 \RequirePackage{xcolor}
 \RequirePackage{mdframed}
 \RequirePackage{dingbat}
-%\RequirePackage[hscale=0.75,vscale=0.85,vmarginratio={2:3},heightrounded]{geometry}
-
-\RequirePackage[
-    %inner=20mm, % left margin
-    %outer=10mm, % right margin
-    top=20mm,
-    bottom=25mm,
-    %bindingoffset=0mm,
-    nohead,
-    %showframe    %TODO REMOVE BEFORE PRODUCTION
-    ]{geometry}
-
-
+\RequirePackage{enumitem}
+\RequirePackage{graphicx}
 
 \RequirePackage[compact]{titlesec}
 \titlespacing{\section}{0pt}{*0}{*0}
 \titlespacing{\subsection}{0pt}{*0}{*0}
 \titlespacing{\subsubsection}{0pt}{*0}{*0}
 
-\newcommand{\renewdb}[1]{%
-	\DTLifdbexists{#1}{%
-		\DTLcleardb{#1}%
-	}{%
-		\DTLnewdb{#1}%
-	}
+\newtoggle{public}
+\toggletrue{public}
+
+\def\beginn#1{\def\theStart{#1}}
+\def\ende#1{\def\theEnd{#1}}
+\def\ifint#1{\iftoggle{public}{}{#1}}
+\def\ifext#1{\iftoggle{public}{#1}{}}
+
+\def\defClearCollection#1{%
+	\definecollection{#1}%
+	\begin{collect}{#1}{}{}\end{collect}}
+
+
+\NewDocumentCommand\intern{}{
+	\togglefalse{public}
 }
 
 
-\newbool{public}
+%%%%%%%%%%%%% Was/Post/Berichte/Diskussion %%%%%%%%%%%%%
+\defClearCollection{ignore}
 
-\ifdefstring{\jobname}{private}%
-{\boolfalse{public}}
-{\booltrue{public}}
-
-
-% 	\NewDocumentEnvironment{#2}{s m}{%
-% 		\myenv{##2}{##1}
-% 			\ifboolexpr{bool {public} and test {\IfBooleanTF{##1}}}
-% 			{} % True
-% 			\bgroup% False
-% 				\booltrue{#2Found}%
-% 				\subsection{##2}
-% 		}%
-% 		%% BODY
-% 		{%
-% 			\egroup
-% 		}%
-% 	}{%
-% 		\endcollect%
-% 	}
-
-
-
-\NewEnviron{myenv}[4]{% %% könnte man vmtl. auch einspaaren, war nur ein versuch
-	\edef\b\BODY %% könnte man vmtl. auch einspaaren, war nur ein versuch
-	\ifboolexpr{bool {public} and test {\IfBooleanTF{#4}}}%
-	{} % True
-	{%
-		\begin{collect}{#2}%
-			\booltrue{#1}%
-			\subsection{#3}%
-			\b%
-		\end{collect}%
-	}%
-}
-
-\NewDocumentCommand\bla{m m m m}{
-	\newbool{#1Found}
-	\newbool{#2Found}
-	\definecollection{#1Collection}
-	\definecollection{#2Collection}
+\NewDocumentCommand\makeCommands{m m m m m}{
+	\defClearCollection{#1CollectionC}
+	\defClearCollection{#2CollectionE}
 	
-	\NewDocumentEnvironment{#2}{s m}{%
-		\myenv{#2Found}{#2Collection}{##2}{##1}%
-	}{%
-		\endmyenv%
-	}
+	\newbool{#1FoundC}
+	\newbool{#2FoundE}
 
-
-	\global\expandafter\NewDocumentCommand\csname#1\endcsname{s o m}{
-		\ifboolexpr{bool {public} and test {\IfBooleanTF{##1}}}{}{%
-			\IfNoValueTF{##2}{%
-				\booltrue{#1Found}%
-				\begin{collect}{#1Collection}{}{}%
-					\item {##3}
-				\end{collect}%
-			}%
-			{\begin{#2}{##2}##3\end{#2}}
+	\DeclareDocumentEnvironment{#2}{s m}{%
+		\ifboolexpr{togl{public} and test{\IfBooleanTF ##1}}
+		{\@nameuse{collect}{ignore}{}{}}%	else
+		{
+			\@nameuse{collect}{#2CollectionE}{}{}
+				\booltrue{#2FoundE}
+				\subsection{##2}
 		}
 	}
-
-
-	\global\expandafter\NewDocumentCommand\csname make#3\endcsname{}{
+	{
+		\@nameuse{endcollect}
+	}
+	
+	%\newenvironment{#2}[1]{
+	%	\booltrue{#2FoundE}
+	%	\@nameuse{collect}{#2CollectionE}{}{}
+	%		\subsection{##1}
+	%}
+	%{
+	%	\@nameuse{endcollect}
+	%}
+	%
+	%\newenvironment{#2*}[1]{%
+	%	\booltrue{#2FoundE}
+	%	\iftoggle{public}%
+	%	{\@nameuse{collect}{ignore}{}{}}% else
+	%	{
+	%		\booltrue{#2FoundE}
+	%		\@nameuse{collect}{#2CollectionE}{}{}
+	%			\subsection{##1}
+	%	}
+	%}
+	%{
+	%	\@nameuse{endcollect}
+	%}
+	
+	
+	\expandafter\NewDocumentCommand\csname #1\endcsname{s o m}{
+		\ifboolexpr{togl{public} and test{\IfBooleanTF ##1}}{}%	else
+		{
+			\IfNoValueTF{##2}{%
+				\booltrue{#1FoundC}
+				\begin{collect}{#1CollectionC}{}{}
+					\item ##3
+				\end{collect}
+			}
+			{%
+				\begin{#2}{##2}
+					##3
+				\end{#2}
+			}
+		}
+	}
+	
+	\expandafter\NewDocumentCommand\csname make#3\endcsname{}{
 		\section{#4}
-		\includecollection{#2Collection}
-		\ifbool{#1Found}{%
-			\ifbool{#2Found}%
-			{\subsection{Sonstiges}}{}%
-			%
+		\includecollection{#2CollectionE}
+		\ifbool{#1FoundC}{%
+			\ifbool{#2FoundE}{\subsection{Sonstiges}}{}
 			\begin{itemize}
-				\includecollection{#1Collection}
+				\includecollection{#1CollectionC}
 			\end{itemize}
-		}{Keine was Punkte}
+		}{
+			\ifbool{#2FoundE}{}{Keine #5.}
+		}
 	}
 }
 
 
-%% WAS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\bla{was}{WAS}{Was}{WAS}
+%%% commands \was and \makeWas; environment WAS %%%
+%{<Name Befehl>}{<Name Umgebung>}{<makeName>}{<Überschrift>}{<Bezeichnung in Text>}
+\makeCommands{was}{WAS}{Was}{WAS}{WAS Punkte}
 
-%% POST %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\bla{post}{POST}{Post}{(Elektronische) Post}
+%%% commands \post and \makePost; environment POST %%%
+\makeCommands{post}{POST}{Post}{(elektronische) Post}{relevante Post}
 
-%% Diskusion %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\bla{diskussion}{DISKUSSION}{Discussions}{Diskussion}
+%%% commands \diskussion and \makeDiscussions; environment DISKUSSION %%%
+\makeCommands{diskussion}{DISKUSSION}{Discussions}{Diskussion}{Diskussion}
 
-
-%% Berichte %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\bla{bericht}{BERICHT}{Reports}{Berichte}
+%%% commands \bericht and \makeReports; environment BERICHT %%%
+\makeCommands{bericht}{BERICHT}{Reports}{Berichte}{Berichte}
 
 \NewDocumentCommand\berichtFakRat{m}{
 	\bericht{Fakultätsrat #1}
 }
 
-%% Anträge %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\definecollection{applicationCollection}
+
+%%%%%%%%%%%%% Anträge %%%%%%%%%%%%%
+
+\defClearCollection{applicationCollection}
+\newbool{antragFound}
+
 
 \NewDocumentEnvironment{ANTRAG}{m m}{%
 	\collect{applicationCollection}{
 		\subsection{#2}
+		\booltrue{antragFound}
 	}{% BODY
 		\edef\status{#1}
 		\ifdefstring{\status}{angenommen}{\par $\Rightarrow$ Der Antrag wurde einstimmig angenommen.}{
@@ -171,34 +174,51 @@
 \NewDocumentCommand\makeApplications{}{
 	\section{Anträge}
 	\includecollection{applicationCollection}
+	\ifbool{antragFound}{}{Keine Anträge.}
 }
 
-%% Date %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\renewdb{dateDb}
+
+%%%%%%%%%%%%% Date %%%%%%%%%%%%%
+
+\DTLnewdb{dateDb}
+\DTLaddcolumn{dateDb}{when}
+\newbool{dateFound}
 
 \NewDocumentCommand\termin{m m}{
+	\booltrue{dateFound}
 	\DTLnewrow{dateDb}%
 	\DTLnewdbentry{dateDb}{what}{#2}%
 	\DTLnewdbentry{dateDb}{when}{#1}%
 }
 
 \NewDocumentCommand\makeDates{}{
-	\section{Anstehende Termine}
-	\DTLsort{when}{dateDb}%
-	%
-	\begin{itemize}
-		\DTLforeach*{dateDb}{\theWhat=what,\theWhen=when}{%
-			\item \textbf{\theWhen}\\\theWhat
-		}%
-	\end{itemize}
+	\ifbool{dateFound}{
+		\section{Anstehende Termine}
+		\DTLsort{when}{dateDb}%
+		%
+		\begin{itemize}
+			\DTLforeach*{dateDb}{\theWhat=what,\theWhen=when}{%
+				\item \textbf{\theWhen}\\\theWhat
+			}%
+		\end{itemize}
+	}{}
 }
 
-%% ToDo %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\renewdb{todoDb}
+
+%%%%%%%%%%%%% ToDo %%%%%%%%%%%%%
+
+\DTLnewdb{todoDb}
 
 \NewDocumentCommand\todo{o m d() o}{
+	\DTLifdbempty{todoDb}{}{
+		\DTLaddcolumn{todoDb}{who}
+		\DTLaddcolumn{todoDb}{where}
+		\DTLaddcolumn{todoDb}{until}
+		\DTLaddcolumn{todoDb}{done}
+	}
 	\edef\where{\thesubsection}%
-	\par\emph{\IfNoValueTF{#1}{ToDo: }{ToDo \checkmark:}}#2 (#3)%
+	%\par\emph{\IfNoValueTF{#1}{ToDo: }{ToDo \checkmark: }}#2 (#3)%
+	\par\emph{ToDo: }#2 (#3) \IfNoValueTF{#1}{}{ \checkmark}%
 	\IfNoValueTF{#4}{}{\\\emph{Bis #4}}%
 	\DTLnewrow{todoDb}%
 	\DTLnewdbentry{todoDb}{what}{#2}%
@@ -215,27 +235,68 @@
 }
 
 \NewDocumentCommand\makeTodo{}{
-	\section{ToDo}
-	%\def\lastWho
-	\DTLsort{who,where,until}{todoDb}
 	
-	\DTLforeach*{todoDb}{\theWhat=what,\theWho=who,\theWhere=where,\theUntil=until,\theDone=done}{%
-		\DTLifnull{\theDone}{
-			\ifdefequal{\lastWho}{\theWho}{}{
-				\ifundef{\lastWho}{}{\end{itemize}}
-				\subsection{\theWho}
-				\edef\lastWho{\theWho}
-				\begin{itemize}
-			}
-			\item[\DTLifnull{\theDone}{$\Box$}{\Checkedbox}] \theWhat\ (siehe \theWhere)%
-			\DTLifnull{\theUntil}{}{\\\emph{Bis \theUntil}}%
-		}{}
-	}%
-	\ifundef{\lastWho}{}{\end{itemize}}
+	\DTLifdbempty{todoDb}{}{
+		\section{ToDo}
+		\DTLsort{who,where,until}{todoDb}
+		\DTLforeach*{todoDb}{\theWhat=what,\theWho=who,\theWhere=where,\theUntil=until,\theDone=done}{%
+			\DTLifnull{\theDone}{
+				\ifdefequal{\lastWho}{\theWho}{}{
+					\ifundef{\lastWho}{}{\end{itemize}}
+					\subsection{\theWho}
+					\edef\lastWho{\theWho}
+					\begin{itemize}
+				}
+				\item[\DTLifnull{\theDone}{$\Box$}{\Checkedbox}] \theWhat\ (siehe \theWhere)%
+				\DTLifnull{\theUntil}{}{\\\emph{Bis \theUntil}}%
+			}{}
+		}%
+		\ifundef{\lastWho}{}{\end{itemize}}
+	}
 }
 
 
-%% Pro/Con %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%% Pro/Con %%%%%%%%%%%%%
+
+%%%%%% B %%%%%%
+
+%\newbool{insidePro}
+%\newbool{insideCon}
+%
+%\NewDocumentCommand\pro{m}{
+%	\ifbool{insidePro}{}
+%	{
+%		\begin{itemize}[labelsep = 6pt, leftmargin=16pt]
+%		\booltrue{insidePro}
+%	}
+%	
+%	\item[\includegraphics{plus.pdf}] #1
+%	
+%	\@ifnextchar\pro{}
+%	{
+%		\end{itemize}
+%		\boolfalse{insidePro}
+%	}
+%}
+%
+%\NewDocumentCommand\con{m}{
+%	\ifbool{insideCon}{}
+%	{
+%		\begin{itemize}[labelsep = 6.5pt, leftmargin=16pt]
+%		\booltrue{insideCon}
+%	}
+%	
+%	\item[\includegraphics{minus.pdf}] #1
+%	
+%	\@ifnextchar\con{}
+%	{
+%		\end{itemize}
+%		\boolfalse{insideCon}
+%	}
+%}
+
+%%%%%% L %%%%%%
+
 \newmdenv[
   topline=false,
   bottomline=false,
@@ -320,10 +381,12 @@
 }
 \makeatother
 
-%% Anwesend %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\renewdb{anwesendDb}
-\renewdb{modDb}
-\renewdb{protDb}
+
+%%%%%%%%%%%%% Anwesenheit %%%%%%%%%%%%%
+
+\DTLnewdb{anwesendDb}
+\DTLnewdb{modDb}
+\DTLnewdb{protDb}
 
 \DTLaddcolumn{anwesendDb}{name}
 \DTLaddcolumn{anwesendDb}{from}
@@ -335,7 +398,8 @@
 \DTLaddcolumn{protDb}{from}
 \DTLaddcolumn{protDb}{to}
 
-\NewDocumentCommand\anwesend{o d() m d()}{
+\NewDocumentCommand\anwesend{o d() m d()}
+{
 	\edef\type{#1}
 	
 	\IfNoValueTF{#1}{
@@ -343,7 +407,7 @@
 	}{
 		\ifdefstring{\type}{leitung}{\def\dbName{modDb}}{%
 		\ifdefstring{\type}{protokoll}{\def\dbName{protDb}}{%
-		\PackageError{mypackage}{you did it wrong}{help text}\stop
+		\PackageError{mypackage}{Ungueltige Rolle}{Erstes Argument muss "leitung", "prokotoll" oder leer sein.}\stop
 	}}}
 	
 	\DTLnewrow{\dbName}
@@ -353,8 +417,6 @@
 	\IfNoValueTF{#4}{}{\DTLnewdbentry{\dbName}{to}{#4}}
 }
 
-
-
 \newcommand{\personlist}[1]{%
 	\DTLsort{name}{#1}%
 	%
@@ -362,7 +424,7 @@
 		\DTLiffirstrow{}{\DTLiflastrow{ und}{,}} %
 		\theName %
 		\DTLifnull{\theFrom}{%
-			\DTLifnull{\theTo}{}{ (Bis \theTo Uhr)}%
+			\DTLifnull{\theTo}{}{ (Bis {\theTo} Uhr)}%
 		}{ %
 			(Ab \theFrom \DTLifnull{\theTo}{}{ bis \theTo} Uhr)%
 		}%
@@ -370,25 +432,12 @@
 }
 
 
-\renewcommand*{\othersectionlevelsformat}[1]{%
-	\makebox[0pt][r]{%
-	\color{black!45}{\csname the#1\endcsname}\enskip\hskip .3cm}%
-}
-
-\def\beginn#1{\def\theStart{#1}}
-\def\ende#1{\def\theEnd{#1}}
-
-\def\ifint#1{\ifbool{public}{}{#1}}
-\def\ifext#1{\ifbool{public}{#1}{}}
-\def\INT#1{\ifbool{public}{}{#1}}
-
-
-
+%%%%%%%%%%%%% Dokumenterzeugung %%%%%%%%%%%%%
 
 \NewDocumentCommand\sitzung{m}{
-	\ifbool{public}%
-	{\subtitle{Oeffentliches Protokoll}}%
-	{\subtitle{\emph{Internes} Protokoll}}
+	\iftoggle{public}
+	{	\subtitle{Öffentliches Protokoll}		}
+	{	\subtitle{\emph{Internes} Protokoll}	}
 	\title{Fachschaftssitzung}
 	\date{\vspace{-1cm}#1}
 	
@@ -397,23 +446,20 @@
 		\setcounter{tocdepth}{0}
 		\maketitle
 		
-% 		\ifboolexpr{bool {public} }{T}{F}
-% 		\ifbool{public}{T}{F}
-		
 		\begin{description}
 			\ifint{\item[Anwesend] \personlist{anwesendDb}}
 			\ifint{\item[Leitung] \personlist{modDb}}
 			\ifint{\item[Protokoll] \personlist{protDb}}
 			\item[Beginn] \theStart
-			\item[Ende] \theEnd
+			\item[Ende]  \theEnd
 		\end{description}
 		
 		\section{Sitzungsleitung / Protokoll}
-		Die Vorschläge zur Sitzungleitung und Protokollanten wurde angenommen.
+		Die Vorschläge zu Sitzungsleitung und Protokollanten wurden angenommen.
 		
 		\makePost
 		
-		\section{Stand Projekte von letzter Woche}
+		%\section{Stand Projekte von letzter Woche}
 		\makeReports
 		\makeApplications
 		\makeDiscussions
