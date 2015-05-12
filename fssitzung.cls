@@ -200,26 +200,26 @@
 
 \DTLnewdb{dateDb}
 \DTLaddcolumn{dateDb}{when}
-\newbool{dateFound}
 
-\NewDocumentCommand\termin{m m}{
-	\booltrue{dateFound}
+\NewDocumentCommand\termin{m m}{%
 	\DTLnewrow{dateDb}%
 	\DTLnewdbentry{dateDb}{what}{#2}%
 	\DTLnewdbentry{dateDb}{when}{#1}%
 }
 
 \NewDocumentCommand\makeDates{}{
-	\ifbool{dateFound}{
-		\section{Anstehende Termine}
-		\DTLsort{when}{dateDb}%
-		%
+	\section{Anstehende Termine}
+	
+	\DTLifdbempty{oldTodoDb}{
+		Keine
+	}{
 		\begin{itemize}
+			\DTLsort{when}{dateDb}%
 			\DTLforeach*{dateDb}{\theWhat=what,\theWhen=when}{%
 				\item \textbf{\theWhen}\\\theWhat
 			}%
 		\end{itemize}
-	}{}
+	}
 }
 
 
