@@ -1,9 +1,29 @@
 \ProvidesClass{fssitzung}[2015/05/09 Fachschaftssitzungs class by GAF]
 \LoadClass[a4paper,parskip,fontsize=9pt,DIV=12]{scrartcl}
 
-\RequirePackage[utf8]{inputenc}
-\RequirePackage[ngerman]{babel}
-\RequirePackage[T1]{fontenc}
+\usepackage{iftex}
+
+\ifPDFTeX
+			\usepackage[utf8]{inputenc}
+			\usepackage[ngerman]{babel}
+			\usepackage[T1]{fontenc}
+\else
+	\ifLuaTeX
+			\usepackage[ngerman]{babel}
+			\usepackage[pdftex]{graphicx} % graphix always before hyperref
+			\usepackage[pdftex,hidelinks]{hyperref}
+	\else
+	% don't switch the order: github.com/reutenauer/polyglossia/issues/50
+		\ifXeTeX
+			\usepackage{polyglossia}
+			\setdefaultlanguage[babelshorthands=true]{german}
+			\usepackage{xunicode} % loads graphicx so load it before hyperref
+			\usepackage[xetex,hidelinks]{hyperref}
+		\fi
+	\fi
+\fi
+
+
 \RequirePackage{lmodern}
 \RequirePackage{microtype}
 
