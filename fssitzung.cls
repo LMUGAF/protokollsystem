@@ -46,7 +46,6 @@
 \titlespacing{\subsubsection}{0pt}{*0}{*0}
 
 \newtoggle{public}
-\toggletrue{public}
 
 \def\beginn#1{\def\theStart{#1}}
 \def\ende#1{\def\theEnd{#1}}
@@ -57,10 +56,9 @@
 	\definecollection{#1}%
 	\begin{collect}{#1}{}{}\end{collect}}
 
-
-\NewDocumentCommand\intern{}{
-	\togglefalse{public}
-}
+\expandafter\ifstrequal\expandafter{\jobname}{private}%
+{\togglefalse{public}}
+{\toggletrue{public}}
 
 
 %%%%%%%%%%%%% Was/Post/Berichte/Diskussion %%%%%%%%%%%%%
