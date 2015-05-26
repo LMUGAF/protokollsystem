@@ -402,6 +402,10 @@
 	}
 }
 
+%% @TODO In \alttodo und \todo neue \alttodo in einer collection speichern, die nicht im tex selbst verwendet wrid, sondern wo nacher nur das file rausgeklaut wird, für das nächste protokoll
+
+%% @TODO "[done]" an das ende verschieben, und prüfen ob das konsistent überall geht
+
 %%%%%%%%%%%%% ToDo %%%%%%%%%%%%%
 
 \DTLnewdb{todoDb}
